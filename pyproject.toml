@@ -1,0 +1,14 @@
+[project]
+name = "openexo-project-ai4"
+version = "0.1.0"
+description = "Modular perception and control experiments for OpenExo in MyoAssist"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "MyoAssist @ git+https://github.com/neumovelab/myoassist.git@b1baf69da59dc6728515d0977cbc8fbf00b9225a",
+]
+
+[tool.uv]
+override-dependencies = [
+    "mujoco>=3.4,<3.5",
+    "dm-control==1.0.36",
+]
