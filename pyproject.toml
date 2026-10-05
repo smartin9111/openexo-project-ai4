@@ -12,3 +12,7 @@ override-dependencies = [
     "mujoco>=3.4,<3.5",
     "dm-control==1.0.36",
 ]
+# macOS 13 (Ventura): torch wheels exist only up to 2.11, 2.12+ needs macOS 14
+constraint-dependencies = [
+    "torch<2.12",
+]

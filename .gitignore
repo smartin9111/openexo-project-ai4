@@ -25,3 +25,10 @@ checkpoints/
 *.egg-info/
 build/
 dist/
+
+# MyoAssist klón
+myoassist/
+
+# Generált fájlok
+src/environment/openexo_flat.xml
+plots/

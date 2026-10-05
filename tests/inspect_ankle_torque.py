@@ -1,29 +1,22 @@
 import mujoco
-import numpy as np
 
 from src.environment.openexo_env import OpenExoEnvironment
 
-
-ANKLE_JOINT_ID = 13
-ANKLE_ACTUATOR_ID = 18
 
 env = OpenExoEnvironment()
 model = env.model
 data = env.data
 
-qvel_index = model.jnt_dofadr[ANKLE_JOINT_ID]
-
 for k in range(10):
-    torque_command = 0.2
+    exo_command = -0.2  # exo command range: [-1, 0], same on both legs
 
-    data.ctrl[ANKLE_ACTUATOR_ID] = torque_command
-
+    env.set_exo_command(exo_command)
     mujoco.mj_step(model, data)
 
     print(
         f"step={k:2d}",
-        f"ctrl={data.ctrl[ANKLE_ACTUATOR_ID]: .4f}",
-        f"qfrc_actuator={data.qfrc_actuator[qvel_index]: .4f}",
-        f"qpos={data.qpos[model.jnt_qposadr[ANKLE_JOINT_ID]]: .4f}",
-        f"qvel={data.qvel[qvel_index]: .4f}",
+        f"ctrl_R={data.ctrl[env.exo_ids['r']]: .4f}",
+        f"ctrl_L={data.ctrl[env.exo_ids['l']]: .4f}",
+        f"torque_R={data.qfrc_actuator[env.ankle_qvel['r']]: .4f}",
+        f"torque_L={data.qfrc_actuator[env.ankle_qvel['l']]: .4f}",
     )

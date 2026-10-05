@@ -1,3 +1,5 @@
+from typing import Optional
+
 import numpy as np
 
 from src.common.types import PerceptionState
@@ -6,16 +8,20 @@ from src.perception.base import BasePerception
 
 class AnkleEKFPerception(BasePerception):
     """
-    Extended Kalman Filter for right ankle state estimation.
+    Extended Kalman Filter for ankle state estimation (one instance per leg).
 
     State:
         x = [ankle_angle, ankle_angular_velocity]
 
     Measurement:
-        noisy ankle angle
+        noisy ankle angle (None or NaN = sensor dropout, the filter only predicts)
 
     Input:
         ankle actuator torque
+
+    Process noise:
+        accel_noise set  -> white-noise-acceleration Q (recommended)
+        accel_noise None -> legacy diagonal Q = eye * process_noise
     """
 
     def __init__(
@@ -23,6 +29,7 @@ class AnkleEKFPerception(BasePerception):
         dt: float,
         process_noise: float = 1e-4,
         measurement_noise: float = 1e-3,
+        accel_noise: Optional[float] = None,
         gravity_gain: float = 5.0,
         damping: float = 0.5,
         torque_gain: float = 1.0,
@@ -38,7 +45,17 @@ class AnkleEKFPerception(BasePerception):
         self.x = np.zeros(2)
 
         self.P = np.eye(2) * 0.1
-        self.Q = np.eye(2) * process_noise
+        if accel_noise is not None:
+            # White-noise-acceleration process noise: the velocity is driven by an
+            # unknown acceleration, so angle and velocity noise are correlated.
+            # A diagonal Q (the legacy path below) leaves the velocity almost
+            # unobservable from angle-only measurements.
+            self.Q = accel_noise * np.array([
+                [dt**3 / 3.0, dt**2 / 2.0],
+                [dt**2 / 2.0, dt],
+            ])
+        else:
+            self.Q = np.eye(2) * process_noise
         self.R = np.array([[measurement_noise]])
 
         self.initialized = False
@@ -110,22 +127,22 @@ class AnkleEKFPerception(BasePerception):
         )
 
     def process(self, observation) -> PerceptionState:
-        angle_measurement = float(
-            observation["ankle_angle_measurement"]
-        )
+        # A missing measurement (None or NaN) is a sensor dropout: the filter
+        # then only predicts and keeps its uncertainty growing.
+        raw = observation.get("ankle_angle_measurement")
+        valid = raw is not None and bool(np.isfinite(raw))
 
-        torque = float(
-            observation.get("ankle_torque", 0.0)
-        )
+        torque = float(observation.get("ankle_torque", 0.0))
 
         if not self.initialized:
             self.reset(
-                angle=angle_measurement,
+                angle=float(raw) if valid else 0.0,
                 velocity=0.0,
             )
         else:
             self.predict(torque)
-            self.update(angle_measurement)
+            if valid:
+                self.update(float(raw))
 
         return PerceptionState(
             joint_positions=np.array([self.x[0]]),
