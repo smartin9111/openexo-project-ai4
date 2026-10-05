@@ -32,3 +32,6 @@ myoassist/
 # Generált fájlok
 src/environment/openexo_flat.xml
 plots/
+
+# Old walking policy (not committed until its status is clarified)
+assets/
